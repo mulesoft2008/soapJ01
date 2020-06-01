@@ -1,0 +1,57 @@
+<choice doc:name="Choice">
+            <when expression="#[xpath3(&quot;//*:Username&quot;, payload, 'STRING')!=&quot;&quot; &amp;&amp; xpath3(&quot;//*:Password&quot;, payload, 'STRING') !=&quot;&quot;]">
+                <message-properties-transformer doc:name="Inbound soap security header ">
+                    <add-message-property key="sts-username" value="#[xpath3(&quot;//*:Username&quot;, payload, 'STRING')]"/>
+                    <add-message-property key="sts-password" value="#[xpath3(&quot;//*:Password&quot;, payload, 'STRING')]"/>
+                </message-properties-transformer>
+                <flow-ref name="Soap_poc-muleAppSub_Flow" doc:name="Soap_poc-muleAppSub_Flow"/>
+                </when>
+          <when expression="#[xpath3(&quot;//*:XBOAUserID__c&quot;, payload, 'STRING')!=&quot;&quot; &amp;&amp; xpath3(&quot;//*:XBOAPassword__c&quot;, payload, 'STRING') !=&quot;&quot;]">
+                <message-properties-transformer doc:name="Inbound soap body">
+                    <add-message-property key="sts-username" value="#[xpath3(&quot;//*:XBOAUserID__c&quot;, payload, 'STRING')]"/>
+                    <add-message-property key="sts-password" value="#[xpath3(&quot;//*:XBOAPassword__c&quot;, payload, 'STRING')]"/>
+                </message-properties-transformer>
+                <flow-ref name="Soap_poc-muleAppSub_Flow" doc:name="Soap_poc-muleAppSub_Flow"/>
+                            </when>
+            <when expression="#[message.inboundProperties.'X-BOA-User-ID' !=null &amp;&amp; message.inboundProperties.'X-BOA-Password' !=null]">
+                <message-properties-transformer doc:name="Http-request-header">
+                    <add-message-property key="sts-username" value="#[message.inboundProperties.'X-BOA-User-ID']"/>
+                    <add-message-property key="sts-password" value="#[message.inboundProperties.'X-BOA-Password']"/>
+                </message-properties-transformer>
+                <flow-ref name="Soap_poc-muleAppSub_Flow" doc:name="Soap_poc-muleAppSub_Flow"/>
+              </when>
+            <otherwise>
+                <logger message="wrong file sent " level="INFO" doc:name="Logger"/>
+            </otherwise>
+        </choice>
+        <logger message="FinalLogger    #[flowVars.token]" level="INFO" doc:name="SoapOutput"/>
+        
+        <choice doc:name="Choice">
+            <when expression="#[xpath3(&quot;//*:Envelope/*:Header/*:Security&quot;, payload, 'STRING')!=&quot;&quot;]">
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output  application/java
+%var replacement = "<Security>" ++ flowVars.token ++ "</Security>"
+---
+flowVars.actualPayload replace /(?s)<[^>]*Security[^>]*>.*?<\\/[^>]*Security>/ with replacement]]></dw:set-payload>
+                </dw:transform-message>
+                </when>
+              <when expression="#[xpath3(&quot;//*:Envelope/*:Header&quot;, payload, 'STRING')!=&quot;&quot;]">
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output  application/java
+%var replacement = "<soap:Header><Security>" ++ flowVars.token ++ "</Security>"
+---
+flowVars.actualPayload replace "<soap:Header>" with replacement]]></dw:set-payload>
+                </dw:transform-message>
+                <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+                </when>  
+            <otherwise>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output  application/java
+---
+flowVars.actualPayload ]]></dw:set-payload>
+                </dw:transform-message>
+            </otherwise>
+        </choice>
