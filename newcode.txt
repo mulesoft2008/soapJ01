@@ -55,3 +55,24 @@ flowVars.actualPayload ]]></dw:set-payload>
                 </dw:transform-message>
             </otherwise>
         </choice>
+        
+        
+        
+        
+        
+        
+        ==========================
+        %dw 1.0
+%output application/java
+%var replacement1 = "<soap:Header><Security>" ++ flowVars.token ++ "</Security>"
+%var replacement2 = "<soapenv:Header><Security>" ++ flowVars.token ++ "</Security>"
+%var replacement3 = "<env:Header><Security>" ++ flowVars.token ++ "</Security>"
+---
+flowVars.actualPayload replace "<soap:Header>" with replacement
+when flowVars.actualPayload contains "<soap:Header>"
+otherwise
+flowVars.actualPayload replace "<soapenv:Header>" with replacement
+when flowVars.actualPayload contains "<soapenv:Header>"
+otherwise
+flowVars.actualPayload replace "<env:Header>" with replacement
+when flowVars.actualPayload contains "<env:Header>"
